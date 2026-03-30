@@ -50,8 +50,10 @@ class Settings(BaseSettings):
     retrieval_weak_uncertain_ratio: float = 0.20
     retrieval_strong_accept_count: int = 3
     retrieval_max_consecutive_weak_batches: int = 2
+    retrieval_max_zero_accept_batches: int = 2
     retrieval_min_accepted_per_path: int = 3
     retrieval_max_scanned_per_path: int = 60
+    retrieval_max_query_variants: int = 2
     pre_ai_mode: str = "strict"
 
     model_config = SettingsConfigDict(

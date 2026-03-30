@@ -21,6 +21,7 @@ class PlanRun(Base):
         nullable=False,
     )
     status: Mapped[str] = mapped_column(Text, nullable=False)
+    completion_reason: Mapped[str | None] = mapped_column(Text)
     started_at: Mapped[str] = mapped_column(
         Text,
         nullable=False,

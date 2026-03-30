@@ -31,6 +31,25 @@ class RetrievalProfileBuilderTests(unittest.TestCase):
         self.assertIn("pain_point", intents)
         self.assertIn("question", intents)
 
+    def test_suggests_comparison_fallback_for_incomplete_vs_query(self) -> None:
+        builder = RetrievalProfileBuilder()
+        profile = builder.build(
+            topic="mặt nạ ngũ hoa",
+            keyword_map={
+                "brand": ["mặt nạ ngũ hoa"],
+                "pain_points": ["mặt nạ ngũ hoa hiệu quả không"],
+                "comparison": ["mặt nạ ngũ hoa vs thương hiệu khác"],
+                "behavior": [],
+                "sentiment": [],
+            },
+        )
+
+        queries = builder.suggest_queries("mặt nạ ngũ hoa vs", profile, max_variants=2)
+
+        self.assertEqual(len(queries), 2)
+        self.assertEqual(queries[0], "mặt nạ ngũ hoa vs thương hiệu khác")
+        self.assertEqual(queries[1], "mặt nạ ngũ hoa vs")
+
 
 class RetrievalScoringTests(unittest.TestCase):
     def setUp(self) -> None:

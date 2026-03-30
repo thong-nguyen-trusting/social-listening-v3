@@ -36,9 +36,35 @@ class InsightService:
                 ).all()
             }
             if not posts:
-                raise ValueError("run has no crawled posts")
+                return {
+                    "run_id": run_id,
+                    "audience_filter": normalized_filter,
+                    "taxonomy_version": TAXONOMY_VERSION,
+                    "posts_crawled": 0,
+                    "posts_included": 0,
+                    "posts_excluded": 0,
+                    "excluded_by_label_count": 0,
+                    "excluded_breakdown": {},
+                    "themes": [],
+                    "warning": "No crawled posts were available for theme analysis.",
+                }
 
         clean_posts, excluded_ids, excluded_breakdown = self._filter_records(posts, labels, normalized_filter)
+        if not clean_posts:
+            with SessionLocal() as session:
+                session.execute(delete(ThemeResult).where(ThemeResult.run_id == run_id))
+                session.commit()
+            response = self._build_response(
+                run_id,
+                posts,
+                [],
+                labels=labels,
+                audience_filter=normalized_filter,
+                excluded_ids=excluded_ids,
+                excluded_breakdown=excluded_breakdown,
+            )
+            response["warning"] = "No eligible records remained after pre-AI gating. Theme analysis was skipped."
+            return response
         warning = "It hon 10 posts nen theme chi mang tinh dai dien." if len(clean_posts) < 10 else None
         ai_response = await self._ai_client.call(
             model=self._settings.theme_analysis_model,

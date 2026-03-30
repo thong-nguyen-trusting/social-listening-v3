@@ -18,7 +18,7 @@ from app.models.plan import Plan, PlanStep
 from app.models.product_context import ProductContext
 from app.models.run import PlanRun, StepRun
 from app.services.health_monitor import HealthMonitorService, utc_now_iso
-from app.services.label_job_service import LabelJobService
+from app.services.label_job_service import LabelJobService, NO_ELIGIBLE_RECORDS_STATUS
 from app.services.planner import get_public_step_id
 from app.services.retrieval_quality import BatchHealthEvaluator, DeterministicRelevanceEngine, RetrievalProfileBuilder
 
@@ -92,6 +92,7 @@ class RunnerService:
                 plan_version=plan.version,
                 grant_id=grant_id,
                 status="RUNNING",
+                completion_reason=None,
                 started_at=started_at,
                 total_records=0,
             )
@@ -127,6 +128,7 @@ class RunnerService:
                 raise ValueError("run not found")
             if run.status not in {"DONE", "FAILED", "CANCELLED"}:
                 run.status = "PAUSED"
+                run.completion_reason = None
                 session.add(run)
                 session.commit()
         await self._emit(run_id, "run_paused", {"run_id": run_id})
@@ -144,6 +146,7 @@ class RunnerService:
                 raise ValueError("run not found")
             if run.status not in {"DONE", "FAILED", "CANCELLED"}:
                 run.status = "RUNNING"
+                run.completion_reason = None
                 session.add(run)
                 session.commit()
         await self._emit(run_id, "run_resumed", {"run_id": run_id})
@@ -161,6 +164,7 @@ class RunnerService:
                 raise ValueError("run not found")
             if run.status not in {"DONE", "FAILED", "CANCELLED"}:
                 run.status = "CANCELLED"
+                run.completion_reason = "USER_CANCELLED"
                 run.ended_at = utc_now_iso()
                 session.add(run)
                 session.commit()
@@ -204,6 +208,7 @@ class RunnerService:
                 "grant_id": run.grant_id,
                 "plan_version": run.plan_version,
                 "status": run.status,
+                "completion_reason": run.completion_reason,
                 "started_at": run.started_at,
                 "ended_at": run.ended_at,
                 "total_records": run.total_records,
@@ -241,27 +246,46 @@ class RunnerService:
                 await self._mark_step_running(run_id, step_run, step)
                 result = await self._execute_step(run_id, step_run, step)
                 await self._mark_step_done(run_id, step_run.step_run_id, result)
+                current_step_run_id = None
 
                 if control.stop_requested:
                     return
                 if control.pause_requested:
                     await control.resume_event.wait()
 
+            completion_reason = "COMPLETED"
+            emitted_status = "DONE"
+            label_summary: dict[str, Any] | None = None
+            if self._label_job_service is not None:
+                label_summary = await self._label_job_service.ensure_job_for_run(run_id, auto_start=True)
+                if label_summary.get("status") == NO_ELIGIBLE_RECORDS_STATUS:
+                    completion_reason = "NO_ELIGIBLE_RECORDS"
+                    emitted_status = "DONE_NO_ELIGIBLE_RECORDS"
+
             with SessionLocal() as session:
                 run = session.get(PlanRun, run_id)
                 if run is not None and run.status != "CANCELLED":
                     run.status = "DONE"
+                    run.completion_reason = completion_reason
                     run.ended_at = utc_now_iso()
                     session.add(run)
                     session.commit()
-            await self._emit(run_id, "run_done", {"run_id": run_id, "status": "DONE"})
-            if self._label_job_service is not None:
-                await self._label_job_service.ensure_job_for_run(run_id, auto_start=True)
+            await self._emit(
+                run_id,
+                "run_done",
+                {
+                    "run_id": run_id,
+                    "status": emitted_status,
+                    "completion_reason": completion_reason,
+                    "label_status": None if label_summary is None else label_summary.get("status"),
+                },
+            )
         except Exception as exc:
             with SessionLocal() as session:
                 run = session.get(PlanRun, run_id)
                 if run is not None:
                     run.status = "FAILED"
+                    run.completion_reason = "STEP_ERROR" if current_step_run_id else "POST_RUN_ERROR"
                     run.ended_at = utc_now_iso()
                     session.add(run)
                     if current_step_run_id:
@@ -272,8 +296,21 @@ class RunnerService:
                             step_run.ended_at = utc_now_iso()
                             session.add(step_run)
                     session.commit()
-            await self._emit(run_id, "step_failed", {"run_id": run_id, "error": str(exc)})
-            await self._emit(run_id, "run_failed", {"run_id": run_id, "error": str(exc)})
+            if current_step_run_id:
+                await self._emit(
+                    run_id,
+                    "step_failed",
+                    {"run_id": run_id, "error": str(exc), "step_run_id": current_step_run_id},
+                )
+            await self._emit(
+                run_id,
+                "run_failed",
+                {
+                    "run_id": run_id,
+                    "error": str(exc),
+                    "failure_stage": "step" if current_step_run_id else "post_run",
+                },
+            )
 
     def _load_next_step(self, run_id: str) -> tuple[StepRun, PlanStep] | None:
         with SessionLocal() as session:
@@ -495,61 +532,90 @@ class RunnerService:
             }
 
         if step.action_type == "SEARCH_POSTS":
-            result = await self._browser_agent.search_posts(
-                step.target, target_count=step.estimated_count or 10
-            )
-            posts_as_raw: list[RawPost] = []
-            for p in result["posts"]:
-                posts_as_raw.append(
-                    RawPost(
-                        post_id=p["post_id"],
-                        group_id_hash=(
-                            self._browser_agent.hash_group_id(p["source_group_id"])
-                            if p.get("source_group_id")
-                            else self._browser_agent.hash_group_id(f"scope:{p['post_id']}")
-                        ),
-                        content=p["content"],
-                        record_type="POST",
-                        source_url=p.get("post_url"),
-                        parent_post_id=None,
-                        parent_post_url=None,
-                        posted_at=p.get("posted_at"),
-                        reaction_count=p.get("reaction_count", 0),
-                        comment_count=p.get("comment_count", 0),
-                        source_group_id=p.get("source_group_id"),
+            remaining = step.estimated_count or 10
+            queries = self._resolve_search_queries(run_id, step)
+            all_posts: list[RawPost] = []
+            all_checkpoint_posts: list[dict[str, Any]] = []
+            all_batch_summaries: list[dict[str, Any]] = []
+            discovered_groups: list[dict[str, Any]] = []
+            query_attempts: list[dict[str, Any]] = []
+            persisted_count = 0
+            duplicate_count = 0
+            accepted_total = 0
+
+            for query in queries:
+                if remaining <= 0:
+                    break
+                result = await self._browser_agent.search_posts(query, target_count=remaining)
+                posts_as_raw: list[RawPost] = []
+                for p in result["posts"]:
+                    posts_as_raw.append(
+                        RawPost(
+                            post_id=p["post_id"],
+                            group_id_hash=(
+                                self._browser_agent.hash_group_id(p["source_group_id"])
+                                if p.get("source_group_id")
+                                else self._browser_agent.hash_group_id(f"scope:{p['post_id']}")
+                            ),
+                            content=p["content"],
+                            record_type="POST",
+                            source_url=p.get("post_url"),
+                            parent_post_id=None,
+                            parent_post_url=None,
+                            posted_at=p.get("posted_at"),
+                            reaction_count=p.get("reaction_count", 0),
+                            comment_count=p.get("comment_count", 0),
+                            source_group_id=p.get("source_group_id"),
+                        )
                     )
+                processed = self._process_candidates(
+                    run_id=run_id,
+                    step_run_id=step_run.step_run_id,
+                    records=posts_as_raw,
+                    source_type=step.action_type,
+                    query_text=query,
                 )
-            processed = self._process_candidates(
-                run_id=run_id,
-                step_run_id=step_run.step_run_id,
-                records=posts_as_raw,
-                source_type=step.action_type,
-                query_text=step.target,
+                persisted_count += processed["persisted_count"]
+                duplicate_count += processed["duplicate_count"]
+                accepted_total += processed["accepted_count"]
+                remaining -= len(result["posts"])
+                all_posts.extend(posts_as_raw)
+                all_checkpoint_posts.extend(processed["posts"])
+                all_batch_summaries.extend(processed["batch_summaries"])
+                query_attempts.append(
+                    {
+                        "query": query,
+                        "collected_count": len(result["posts"]),
+                        "accepted_count": processed["accepted_count"],
+                        "stop_reason": processed["stop_reason"],
+                        "used_reformulation": query != queries[0],
+                    }
+                )
+                for group in result["discovered_groups"]:
+                    if not any(existing.get("group_id") == group.get("group_id") for existing in discovered_groups):
+                        discovered_groups.append(group)
+                if accepted_total > 0 or not processed["should_reformulate"]:
+                    break
+
+            accepted_group_ids = self._dedupe_keep_order(
+                [
+                    gid
+                    for post in all_checkpoint_posts
+                    for gid in [post.get("source_group_id")]
+                    if gid and post.get("pre_ai_status") == "ACCEPTED"
+                ]
             )
-            persisted_count = processed["persisted_count"]
-            duplicate_count = processed["duplicate_count"]
-            checkpoint_posts = [
-                {
-                    "post_id": p["post_id"],
-                    "post_url": p["post_url"],
-                    "source_group_id": p.get("source_group_id"),
-                    "source_group_name": p.get("source_group_name"),
-                    "source_group_privacy": p.get("source_group_privacy"),
-                    "source_group_status": p.get("source_group_status"),
-                    "source_group_can_access": p.get("source_group_can_access"),
-                }
-                for p in result["posts"]
-            ]
             return {
-                "actual_count": len(result["posts"]),
+                "actual_count": len(all_posts),
                 "records_added": persisted_count,
                 "checkpoint": {
                     "phase": "done",
                     "step_id": public_step_id,
-                    "posts": processed["posts"],
-                    "discovered_groups": result["discovered_groups"],
-                    "accepted_group_ids": processed["accepted_group_ids"],
-                    "batch_summaries": processed["batch_summaries"],
+                    "posts": all_checkpoint_posts,
+                    "discovered_groups": discovered_groups,
+                    "accepted_group_ids": accepted_group_ids,
+                    "batch_summaries": all_batch_summaries,
+                    "query_attempts": query_attempts,
                     "persisted_count": persisted_count,
                     "duplicate_count": duplicate_count,
                 },
@@ -601,36 +667,61 @@ class RunnerService:
 
         if step.action_type == "SEARCH_IN_GROUP":
             group_ids = self._resolve_discovered_group_ids(run_id, step)
-            query = self._resolve_search_query(step)
+            queries = self._resolve_search_queries(run_id, step)
             all_posts: list[RawPost] = []
             persisted_total = 0
             duplicate_total = 0
             all_checkpoint_posts: list[dict[str, Any]] = []
             all_batch_summaries: list[dict[str, Any]] = []
+            query_attempts: list[dict[str, Any]] = []
             remaining = step.estimated_count or 10
-            for group_id in group_ids:
-                if remaining <= 0:
+            accepted_total = 0
+            for query in queries:
+                query_accepted = 0
+                query_collected = 0
+                query_stop_reason: str | None = None
+                should_reformulate = False
+                for group_id in group_ids:
+                    if remaining <= 0:
+                        break
+                    posts = await self._browser_agent.search_in_group(
+                        group_id, query, target_count=remaining
+                    )
+                    for post in posts:
+                        post["source_group_id"] = group_id
+                    all_posts.extend(posts)
+                    processed = self._process_candidates(
+                        run_id=run_id,
+                        step_run_id=step_run.step_run_id,
+                        records=posts,
+                        source_type=step.action_type,
+                        query_text=query,
+                    )
+                    persisted = processed["persisted_count"]
+                    dupes = processed["duplicate_count"]
+                    persisted_total += persisted
+                    duplicate_total += dupes
+                    query_accepted += processed["accepted_count"]
+                    accepted_total += processed["accepted_count"]
+                    query_collected += len(posts)
+                    remaining -= len(posts)
+                    all_checkpoint_posts.extend(processed["posts"])
+                    all_batch_summaries.extend(processed["batch_summaries"])
+                    query_stop_reason = processed["stop_reason"]
+                    should_reformulate = processed["should_reformulate"]
+                    if accepted_total > 0 or should_reformulate:
+                        break
+                query_attempts.append(
+                    {
+                        "query": query,
+                        "collected_count": query_collected,
+                        "accepted_count": query_accepted,
+                        "stop_reason": query_stop_reason,
+                        "used_reformulation": query != queries[0],
+                    }
+                )
+                if remaining <= 0 or accepted_total > 0 or not should_reformulate:
                     break
-                posts = await self._browser_agent.search_in_group(
-                    group_id, query, target_count=remaining
-                )
-                for post in posts:
-                    post["source_group_id"] = group_id
-                all_posts.extend(posts)
-                processed = self._process_candidates(
-                    run_id=run_id,
-                    step_run_id=step_run.step_run_id,
-                    records=posts,
-                    source_type=step.action_type,
-                    query_text=query,
-                )
-                persisted = processed["persisted_count"]
-                dupes = processed["duplicate_count"]
-                persisted_total += persisted
-                duplicate_total += dupes
-                remaining -= len(posts)
-                all_checkpoint_posts.extend(processed["posts"])
-                all_batch_summaries.extend(processed["batch_summaries"])
             return {
                 "actual_count": len(all_posts),
                 "records_added": persisted_total,
@@ -638,7 +729,8 @@ class RunnerService:
                     "phase": "done",
                     "step_id": public_step_id,
                     "group_ids_searched": [g for g in group_ids],
-                    "search_query": query,
+                    "search_query": queries[0] if queries else self._resolve_search_query(step),
+                    "query_attempts": query_attempts,
                     "collected_count": len(all_posts),
                     "persisted_count": persisted_total,
                     "duplicate_count": duplicate_total,
@@ -772,6 +864,16 @@ class RunnerService:
             return target.split(":", 1)[1].strip().split(" in ")[0].strip()
         return target.split(" in ")[0].strip() or "research"
 
+    def _resolve_search_queries(self, run_id: str, step: PlanStep) -> list[str]:
+        primary_query = self._resolve_search_query(step)
+        profile = self._get_retrieval_profile_for_run(run_id)
+        max_variants = int(getattr(self._settings, "retrieval_max_query_variants", 2) or 2)
+        return self._retrieval_profile_builder.suggest_queries(
+            primary_query,
+            profile,
+            max_variants=max_variants,
+        )
+
     def _get_step_payloads(self, run_id: str) -> dict[str, dict[str, Any]]:
         with SessionLocal() as session:
             step_runs = session.scalars(select(StepRun).where(StepRun.run_id == run_id)).all()
@@ -885,6 +987,10 @@ class RunnerService:
                 "posts": [],
                 "accepted_group_ids": [],
                 "batch_summaries": [],
+                "accepted_count": 0,
+                "scanned_count": 0,
+                "should_reformulate": False,
+                "stop_reason": None,
             }
 
         batch_size = max(1, int(getattr(self._settings, "retrieval_batch_size", 20) or 20))
@@ -896,8 +1002,10 @@ class RunnerService:
         accepted_group_ids: list[str] = []
         batch_summaries: list[dict[str, Any]] = []
         consecutive_weak_batches = 0
+        consecutive_zero_accept_batches = 0
         total_accepted = 0
         total_scanned = 0
+        stop_reason: str | None = None
 
         for batch_index, start in enumerate(range(0, len(records), batch_size), start=1):
             raw_batch = records[start : start + batch_size]
@@ -924,12 +1032,24 @@ class RunnerService:
                 consecutive_weak_batches += 1
             else:
                 consecutive_weak_batches = 0
+            if batch_health.accepted_count == 0:
+                consecutive_zero_accept_batches += 1
+            else:
+                consecutive_zero_accept_batches = 0
 
             batch_decision = "continue"
             if consecutive_weak_batches >= int(getattr(self._settings, "retrieval_max_consecutive_weak_batches", 2)):
                 batch_decision = "stop"
+                stop_reason = "weak_batches_exceeded"
+            if (
+                total_accepted == 0
+                and consecutive_zero_accept_batches >= int(getattr(self._settings, "retrieval_max_zero_accept_batches", 2))
+            ):
+                batch_decision = "stop"
+                stop_reason = "zero_accepted_batches_exceeded"
             if total_scanned >= int(getattr(self._settings, "retrieval_max_scanned_per_path", 60)) and total_accepted < int(getattr(self._settings, "retrieval_min_accepted_per_path", 3)):
                 batch_decision = "stop"
+                stop_reason = "min_accepts_not_reached"
 
             persisted_count, duplicate_count, persisted_refs = self._persist_scored_posts(
                 run_id=run_id,
@@ -947,7 +1067,13 @@ class RunnerService:
                 for ref in persisted_refs
                 if ref.get("source_group_id") and ref.get("pre_ai_status") == "ACCEPTED"
             )
-            summary = {"batch_index": batch_index, **batch_health.as_dict(), "batch_size": len(raw_batch), "batch_decision": batch_decision}
+            summary = {
+                "batch_index": batch_index,
+                **batch_health.as_dict(),
+                "batch_size": len(raw_batch),
+                "batch_decision": batch_decision,
+                "stop_reason": stop_reason if batch_decision == "stop" else None,
+            }
             batch_summaries.append(summary)
             if batch_decision == "stop":
                 break
@@ -958,6 +1084,10 @@ class RunnerService:
             "posts": checkpoint_posts,
             "accepted_group_ids": self._dedupe_keep_order(accepted_group_ids),
             "batch_summaries": batch_summaries,
+            "accepted_count": total_accepted,
+            "scanned_count": total_scanned,
+            "should_reformulate": total_accepted == 0 and bool(batch_summaries) and batch_summaries[-1]["batch_decision"] == "stop",
+            "stop_reason": stop_reason,
         }
 
     def _persist_scored_posts(

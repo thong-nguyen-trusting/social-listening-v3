@@ -28,6 +28,7 @@ class RunResponse(BaseModel):
     grant_id: str
     plan_version: int
     status: str
+    completion_reason: str | None = None
     started_at: str
     ended_at: str | None
     total_records: int

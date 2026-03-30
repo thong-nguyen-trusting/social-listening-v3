@@ -71,16 +71,25 @@ async def run_stream(run_id: str, http_request: Request) -> StreamingResponse:
             for event, payload in history:
                 yield f"event: {event}\ndata: {json.dumps(payload)}\n\n"
                 if event in {"run_done", "run_failed", "run_cancelled"}:
-                    yield f"event: stream_complete\ndata: {json.dumps({'run_id': run_id, 'status': payload.get('status', event)})}\n\n"
+                    yield (
+                        "event: stream_complete\n"
+                        f"data: {json.dumps({'run_id': run_id, 'status': payload.get('status', event), 'completion_reason': payload.get('completion_reason')})}\n\n"
+                    )
                     return
             if snapshot["status"] in {"DONE", "FAILED", "CANCELLED"}:
-                yield f"event: stream_complete\ndata: {json.dumps({'run_id': run_id, 'status': snapshot['status']})}\n\n"
+                yield (
+                    "event: stream_complete\n"
+                    f"data: {json.dumps({'run_id': run_id, 'status': snapshot['status'], 'completion_reason': snapshot.get('completion_reason')})}\n\n"
+                )
                 return
             while True:
                 event, payload = await queue.get()
                 yield f"event: {event}\ndata: {json.dumps(payload)}\n\n"
                 if event in {"run_done", "run_failed", "run_cancelled"}:
-                    yield f"event: stream_complete\ndata: {json.dumps({'run_id': run_id, 'status': payload.get('status', event)})}\n\n"
+                    yield (
+                        "event: stream_complete\n"
+                        f"data: {json.dumps({'run_id': run_id, 'status': payload.get('status', event), 'completion_reason': payload.get('completion_reason')})}\n\n"
+                    )
                     return
         finally:
             runner_service.unsubscribe(run_id, queue)

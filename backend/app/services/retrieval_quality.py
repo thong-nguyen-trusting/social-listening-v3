@@ -174,6 +174,45 @@ class RetrievalProfileBuilder:
             return "question"
         return "generic"
 
+    def suggest_queries(self, query: str, profile: dict[str, Any] | None, *, max_variants: int = 2) -> list[str]:
+        profile = profile or {}
+        max_variants = max(1, max_variants)
+        normalized_query = normalize_text(query)
+        query_families = profile.get("query_families", [])
+        preferred_intents: list[str]
+        incomplete_comparison = normalized_query.endswith(" vs") or " vs " in normalized_query
+        if incomplete_comparison:
+            preferred_intents = ["comparison", "pain_point", "question"]
+        elif any(term in normalized_query for term in ("fake", "lua dao", "loi", "te")):
+            preferred_intents = ["complaint", "pain_point", "question"]
+        else:
+            inferred_family = self.infer_query_family(query, profile)
+            if inferred_family in {"generic", "brand"}:
+                preferred_intents = ["pain_point", "question", "comparison"]
+            elif inferred_family == "comparison":
+                preferred_intents = ["comparison", "pain_point", "question"]
+            else:
+                preferred_intents = ["question", "pain_point", "comparison", "complaint"]
+
+        ordered_queries: list[str] = []
+        if not incomplete_comparison:
+            ordered_queries.append(query)
+
+        primary_inserted = False
+        for intent in preferred_intents:
+            for family in query_families:
+                if family.get("intent") != intent:
+                    continue
+                candidate = str(family.get("query") or "").strip()
+                if candidate:
+                    ordered_queries.append(candidate)
+            if incomplete_comparison and not primary_inserted:
+                ordered_queries.append(query)
+                primary_inserted = True
+
+        ordered_queries.append(query)
+        return dedupe_keep_order(ordered_queries)[:max_variants]
+
 
 class DeterministicRelevanceEngine:
     def score(

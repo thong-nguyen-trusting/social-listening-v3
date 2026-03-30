@@ -47,8 +47,8 @@ class ContentLabelingService:
                 for post in db_posts
             ]
             if not posts:
-                job.status = "FAILED"
-                job.error_message = "run has no crawled posts"
+                job.status = "CANCELLED"
+                job.error_message = "no eligible records after pre-ai gating"
                 job.ended_at = utc_now_iso()
                 session.add(job)
                 session.commit()

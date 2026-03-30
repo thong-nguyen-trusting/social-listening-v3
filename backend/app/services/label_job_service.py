@@ -16,6 +16,8 @@ from app.models.run import PlanRun
 from app.services.content_labeling import ContentLabelingService
 from app.services.health_monitor import utc_now_iso
 
+NO_ELIGIBLE_RECORDS_STATUS = "NO_ELIGIBLE_RECORDS"
+
 
 class LabelJobService:
     def __init__(self, content_labeling_service: ContentLabelingService, settings: Settings) -> None:
@@ -28,14 +30,9 @@ class LabelJobService:
             run = session.get(PlanRun, run_id)
             if run is None:
                 raise ValueError("run not found")
-            total_records = session.scalar(
-                select(func.count()).select_from(CrawledPost).where(
-                    CrawledPost.run_id == run_id,
-                    self._eligible_condition(),
-                )
-            ) or 0
+            total_records = self.count_eligible_records(run_id, session=session)
             if total_records == 0:
-                raise ValueError("run has no crawled posts")
+                return self._build_no_eligible_summary(run_id)
             job = session.scalars(
                 select(LabelJob)
                 .where(
@@ -83,15 +80,12 @@ class LabelJobService:
             run = session.get(PlanRun, run_id)
             if run is None:
                 raise ValueError("run not found")
-            total_records = session.scalar(
-                select(func.count()).select_from(CrawledPost).where(
-                    CrawledPost.run_id == run_id,
-                    self._eligible_condition(),
-                )
-            ) or 0
+            total_records = self.count_eligible_records(run_id, session=session)
             latest_job = session.scalars(
                 select(LabelJob).where(LabelJob.run_id == run_id).order_by(LabelJob.created_at.desc())
             ).first()
+            if latest_job is None and total_records == 0:
+                return self._build_no_eligible_summary(run_id)
             current_labels = session.scalars(
                 select(ContentLabel)
                 .join(CrawledPost, CrawledPost.current_label_id == ContentLabel.label_id)
@@ -114,6 +108,31 @@ class LabelJobService:
         if payload["status"] in {"RUNNING", "PENDING"}:
             payload["warning"] = "Labeling is still in progress. Theme filters may shift as more records are classified."
         return payload
+
+    def count_eligible_records(self, run_id: str, *, session=None) -> int:
+        if session is not None:
+            return session.scalar(
+                select(func.count()).select_from(CrawledPost).where(
+                    CrawledPost.run_id == run_id,
+                    self._eligible_condition(),
+                )
+            ) or 0
+        with SessionLocal() as local_session:
+            return self.count_eligible_records(run_id, session=local_session)
+
+    def _build_no_eligible_summary(self, run_id: str) -> dict[str, Any]:
+        return {
+            "run_id": run_id,
+            "label_job_id": None,
+            "status": NO_ELIGIBLE_RECORDS_STATUS,
+            "taxonomy_version": self._settings.label_taxonomy_version,
+            "records_total": 0,
+            "records_labeled": 0,
+            "records_fallback": 0,
+            "records_failed": 0,
+            "counts_by_author_role": {},
+            "warning": "No eligible records remained after pre-AI gating. Labeling was skipped.",
+        }
 
     def get_record_samples(self, run_id: str, *, label_filter: str | None = None, limit: int = 20) -> dict[str, Any]:
         with SessionLocal() as session:
