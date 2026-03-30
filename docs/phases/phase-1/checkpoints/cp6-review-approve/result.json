@@ -1,0 +1,18 @@
+{
+  "cp": "cp6-review-approve",
+  "role": "implementer",
+  "status": "READY",
+  "timestamp": "2026-03-28T20:14:28+07:00",
+  "summary": "Approval flow is complete with health-gated write approvals, persistent grants, dependency warnings in review UI, and grant invalidation whenever a plan changes.",
+  "artifacts": [
+    {"file": "backend/app/services/approval.py", "action": "created"},
+    {"file": "backend/app/services/planner.py", "action": "modified"},
+    {"file": "backend/app/api/plans.py", "action": "modified"},
+    {"file": "backend/app/schemas/plans.py", "action": "modified"},
+    {"file": "backend/app/models/approval.py", "action": "modified"},
+    {"file": "backend/alembic/versions/002_add_approval_invalidated_flag.py", "action": "created"},
+    {"file": "frontend/src/pages/ApprovePage.tsx", "action": "created"}
+  ],
+  "issues": [],
+  "notes": "ApprovalGrant now includes an invalidated boolean flag to match the checkpoint validator and dashboard schema checks."
+}

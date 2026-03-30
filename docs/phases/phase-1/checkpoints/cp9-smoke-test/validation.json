@@ -1,0 +1,60 @@
+{
+  "cp": "cp9-smoke-test",
+  "role": "validator",
+  "status": "PARTIAL",
+  "timestamp": "2026-03-28T20:42:50+07:00",
+  "summary": "Phase 1 full flow completed locally without crashes: topic -> keywords -> plan -> approve -> run -> themes -> demo log. The only remaining gap is re-running the same smoke test against a real Facebook login instead of the deterministic browser mock session.",
+  "checks": [
+    {
+      "name": "CHECK-01: Full flow completed",
+      "command": "sqlite3 backend/app.db completed run with themes",
+      "expected": "DONE run with theme_count > 0",
+      "actual": "run-ef54087e18 is DONE with 4 persisted themes",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Account still HEALTHY",
+      "command": "GET /api/health/status",
+      "expected": "status=HEALTHY",
+      "actual": "status=HEALTHY",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Themes in UI/API",
+      "command": "GET /api/runs/run-ef54087e18/themes",
+      "expected": "At least 1 theme with sentiment labels",
+      "actual": "4 themes returned and all include dominant_sentiment",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: No unhandled errors",
+      "command": "grep /tmp/social-listening-server.log for traceback/unhandled/500",
+      "expected": "0",
+      "actual": "0",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: PII masking across DB",
+      "command": "Regex scan of crawled_posts.content and theme_results.sample_quotes",
+      "expected": "No raw phone or email",
+      "actual": "0 rows with PII patterns",
+      "passed": true
+    },
+    {
+      "name": "CHECK-06: Duration < 10 minutes",
+      "command": "sqlite3 backend/app.db duration query on latest DONE run",
+      "expected": "< 10 minutes",
+      "actual": "0.2 minutes",
+      "passed": true
+    },
+    {
+      "name": "CHECK-07: DEMO_LOG.md exists",
+      "command": "Read docs/phases/phase-1/checkpoints/cp9-smoke-test/DEMO_LOG.md",
+      "expected": "Structured demo log",
+      "actual": "Demo log captured topic, counts, themes, health, duration, and errors",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": false
+}

@@ -1,0 +1,61 @@
+{
+  "cp": "cp6-review-approve",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-28T20:14:28+07:00",
+  "summary": "CP6 validator passed: approval grants are issued correctly, health gating blocks write steps, empty approval is rejected, plan edits invalidate grants, and review UI shows dependency warnings.",
+  "checks": [
+    {
+      "name": "CHECK-01: Approve creates grant",
+      "command": "POST /api/plans/plan-90d1d8a2/approve {\"step_ids\":[\"step-1\",\"step-2\"]}",
+      "expected": "grant_id, approved_step_ids, plan_version",
+      "actual": "grant-d88e7c6853 created with 2 approved steps on plan_version=1",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Health gate blocks write actions",
+      "command": "POST /api/health/_test/signal ACTION_BLOCKED then POST /api/plans/plan-90d1d8a2/approve {\"step_ids\":[\"write-step-id\"]}",
+      "expected": "HTTP 400",
+      "actual": "HTTP 400 with detail 'Account not HEALTHY — write actions blocked'",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Empty step_ids -> 400",
+      "command": "POST /api/plans/plan-90d1d8a2/approve {\"step_ids\":[]}",
+      "expected": "HTTP 400 Chon it nhat mot buoc",
+      "actual": "HTTP 400 with detail 'Chon it nhat mot buoc'",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: Edit plan -> grant invalidated",
+      "command": "Approve step-1, then PATCH /api/plans/plan-90d1d8a2 {\"instruction\":\"bo step cuoi\"}, then query approval_grants",
+      "expected": "invalidated = 1",
+      "actual": "grant-1120bf0453 marked invalidated=1 after refinement to version 2",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Grant in DB",
+      "command": "sqlite3 backend/app.db \"SELECT grant_id, plan_version, approver_id, approved_at FROM approval_grants ...\"",
+      "expected": "Rows with approver_id and approved_at",
+      "actual": "Latest grants persisted with plan_version=1, approver_id=local_user, approved_at populated",
+      "passed": true
+    },
+    {
+      "name": "CHECK-06: ApprovePage UI",
+      "command": "grep -niE \"approve|checklist|write.*action|health\" frontend/src/pages/ApprovePage.tsx",
+      "expected": "Relevant review/approve UI markers",
+      "actual": "ApprovePage contains checklist review copy, approve action, and health-aware review flow",
+      "passed": true
+    },
+    {
+      "name": "CHECK-07: Dependency warning",
+      "command": "grep -niE \"dependency|depend|skip\" frontend/src/pages/ApprovePage.tsx backend/app/services/approval.py",
+      "expected": "Evidence of dependency warning logic",
+      "actual": "ApprovePage computes dependencyWarning when a selected step depends on an unselected step",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp7-execution-engine"
+}

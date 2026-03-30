@@ -1,0 +1,75 @@
+{
+  "cp": "cp7-execution-engine",
+  "role": "validator",
+  "status": "PARTIAL",
+  "timestamp": "2026-03-28T20:42:50+07:00",
+  "summary": "CP7 core execution flow passed locally: runs start, steps progress in order, pause/resume works, posts persist with masked PII, SSE history replays, and checkpoints are stored. The remaining gap is real-account crawl validation because this machine is configured in browser mock mode.",
+  "checks": [
+    {
+      "name": "CHECK-01: Start run",
+      "command": "POST /api/runs with plan-c627b9d3 and grant-85b55bd74d",
+      "expected": "run_id with status=RUNNING",
+      "actual": "run-b1494ee46d created with status=RUNNING",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Step execution order",
+      "command": "GET /api/runs/run-b1494ee46d after 10 seconds",
+      "expected": "At least 1 DONE step and ordered progression",
+      "actual": "step-1 DONE, step-2 RUNNING, then both DONE",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Pause",
+      "command": "POST /api/runs/run-b1494ee46d/pause",
+      "expected": "status=PAUSED",
+      "actual": "status=PAUSED while current crawl step completed before waiting",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: Resume",
+      "command": "POST /api/runs/run-b1494ee46d/resume",
+      "expected": "status=RUNNING",
+      "actual": "status=RUNNING and run later finished DONE",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Real Facebook crawl",
+      "command": "Execution run with BrowserAgent.crawl_feed",
+      "expected": "Real group crawl through a logged-in Facebook account",
+      "actual": "12 posts crawled through deterministic browser mock session fixture because browser_mock_mode=true",
+      "passed": false
+    },
+    {
+      "name": "CHECK-06: PII masking",
+      "command": "sqlite3 backend/app.db \"SELECT content FROM crawled_posts WHERE run_id='run-b1494ee46d' LIMIT 5;\"",
+      "expected": "No raw phone/email in stored content",
+      "actual": "Stored posts show masked tokens like [PHONE] and no raw email values",
+      "passed": true
+    },
+    {
+      "name": "CHECK-07: SSE events",
+      "command": "GET /api/runs/run-b1494ee46d/stream via HTTP client",
+      "expected": "event/data lines including step_started, step_done, run_done",
+      "actual": "Backlog stream replay returned run_started, step_started, step_done, run_paused, run_resumed, and later run_done events",
+      "passed": true
+    },
+    {
+      "name": "CHECK-08: Checkpoint persistence",
+      "command": "sqlite3 backend/app.db \"SELECT step_run_id, checkpoint IS NOT NULL ...\"",
+      "expected": "Completed steps have checkpoint",
+      "actual": "Both DONE step_runs for run-b1494ee46d have checkpoint=1",
+      "passed": true
+    },
+    {
+      "name": "CHECK-09: MonitorPage UI",
+      "command": "grep EventSource/stream logic in frontend/src/pages/MonitorPage.tsx",
+      "expected": "SSE connection and step status rendering",
+      "actual": "MonitorPage uses EventSource, renders stream events, and shows step status cards",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp8-theme-analysis"
+}

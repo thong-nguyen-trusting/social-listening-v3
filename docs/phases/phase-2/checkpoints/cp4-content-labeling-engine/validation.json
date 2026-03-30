@@ -1,0 +1,47 @@
+{
+  "cp": "cp4-content-labeling-engine",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-29T09:40:00+07:00",
+  "summary": "The engine labels a real backfill run, preserves comment independence, writes current_label pointers, and persists fallback labels when AI output is missing.",
+  "checks": [
+    {
+      "name": "CHECK-01: Batch labeling persists labels",
+      "command": "sqlite query on content_labels for run-755de99fc7",
+      "expected": "Labels persisted for the run",
+      "actual": "content_labels has 77 rows for run-755de99fc7 under one label_job_id",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Comments labeled independently",
+      "command": "sqlite query comparing COMMENT label role vs parent POST label role",
+      "expected": "Comment labels may differ from parent post labels",
+      "actual": "11 comment records on run-755de99fc7 have author_role different from their parent post label",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: AI error -> fallback persists",
+      "command": "temporary SQLite smoke with StubAI returning empty records",
+      "expected": "Fallback label is stored and job becomes PARTIAL",
+      "actual": "Fallback smoke produced job status=PARTIAL, content_labels=('unknown','fallback','ai_missing_record_output'), crawled_posts.label_status=FALLBACK",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: Current label pointers updated",
+      "command": "sqlite query on crawled_posts current_label_id",
+      "expected": "current_label_id populated for labeled records",
+      "actual": "77 crawled_posts on run-755de99fc7 have current_label_id not null",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Batch call is not 1 request/record",
+      "command": "observe summary progression on run-755de99fc7",
+      "expected": "Progress advances in batches",
+      "actual": "Live summary progressed from 0 to 20 to 77 labeled records, indicating grouped batch processing rather than one request per record",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp5-filtered-theme-api"
+}

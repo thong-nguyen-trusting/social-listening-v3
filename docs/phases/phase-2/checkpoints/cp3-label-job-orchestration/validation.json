@@ -1,0 +1,47 @@
+{
+  "cp": "cp3-label-job-orchestration",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-29T09:40:00+07:00",
+  "summary": "Label job orchestration works on a real backfill run, exposes progress through the summary API, and remains isolated from crawl run status.",
+  "checks": [
+    {
+      "name": "CHECK-01: Create label job for valid run",
+      "command": "POST /api/runs/run-755de99fc7/labels/jobs",
+      "expected": "Valid label job created or reused",
+      "actual": "Returned label_job_id=label-job-a5ee639925 for run-755de99fc7",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Lifecycle transitions",
+      "command": "GET /api/runs/run-755de99fc7/labels/summary during execution",
+      "expected": "PENDING -> RUNNING -> DONE/PARTIAL/FAILED",
+      "actual": "Observed PENDING, then RUNNING with partial counts, then DONE at 77/77 labeled",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Summary API progress counts",
+      "command": "GET /api/runs/run-755de99fc7/labels/summary",
+      "expected": "records_total/labeled/fallback/failed and role counts available",
+      "actual": "Summary returned 77 total, 77 labeled, 0 fallback, 0 failed, plus counts_by_author_role",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: Duplicate same run + taxonomy handled",
+      "command": "POST /api/runs/run-755de99fc7/labels/jobs twice",
+      "expected": "Second trigger blocked or reused logically",
+      "actual": "Second POST returned the same label_job_id=label-job-a5ee639925 without creating a second job",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Crawl run status unchanged",
+      "command": "GET /api/runs/run-755de99fc7",
+      "expected": "Labeling does not mutate crawl run lifecycle",
+      "actual": "run-755de99fc7 remained status=CANCELLED while labeling completed separately",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp4-content-labeling-engine"
+}

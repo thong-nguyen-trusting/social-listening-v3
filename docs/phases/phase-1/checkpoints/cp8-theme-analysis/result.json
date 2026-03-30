@@ -1,0 +1,17 @@
+{
+  "cp": "cp8-theme-analysis",
+  "role": "implementer",
+  "status": "READY",
+  "timestamp": "2026-03-28T20:42:50+07:00",
+  "summary": "Theme analysis now classifies crawled posts into the Phase 1 taxonomy, tracks excluded noise, masks quotes, and exposes the first visible insight output in the UI.",
+  "artifacts": [
+    {"file": "backend/app/services/insight.py", "action": "created"},
+    {"file": "backend/app/skills/theme_classification.md", "action": "created"},
+    {"file": "backend/app/api/insights.py", "action": "created"},
+    {"file": "backend/app/schemas/insights.py", "action": "created"},
+    {"file": "backend/app/infra/ai_client.py", "action": "modified"},
+    {"file": "frontend/src/pages/ThemesPage.tsx", "action": "created"}
+  ],
+  "issues": [],
+  "notes": "Theme analysis is cached per run and uses the same masked post content persisted by the execution engine."
+}

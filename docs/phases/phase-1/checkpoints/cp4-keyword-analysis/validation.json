@@ -1,0 +1,61 @@
+{
+  "cp": "cp4-keyword-analysis",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-28T20:10:18+07:00",
+  "summary": "CP4 validator passed: Vietnamese topic analysis returns five keyword groups, ambiguity triggers clarification, edits persist to ProductContext, and the UI marker is present.",
+  "checks": [
+    {
+      "name": "CHECK-01: Topic -> keywords 5 categories",
+      "command": "POST /api/sessions with \"Khach hang nghi gi ve TPBank EVO?\"",
+      "expected": "5 populated categories",
+      "actual": "brand, pain_points, sentiment, behavior, comparison all populated (27 keywords)",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Diacritics included",
+      "command": "POST /api/sessions with \"Phan hoi ve dich vu giao hang\"",
+      "expected": "Vietnamese diacritics and ASCII variants",
+      "actual": "Returned both accented terms like \"dịch vụ chậm\" and ASCII variants like \"dich vu cham\"",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Ambiguous topic -> clarification",
+      "command": "POST /api/sessions with \"ban hang\"",
+      "expected": "clarification_required with questions",
+      "actual": "status=clarification_required with 2 clarifying questions",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: PATCH keywords",
+      "command": "PATCH /api/sessions/{context_id}/keywords",
+      "expected": "status=keywords_ready",
+      "actual": "status=keywords_ready after manual keyword confirmation",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: ProductContext in DB",
+      "command": "sqlite3 backend/app.db \"SELECT context_id, status, keyword_json IS NOT NULL ...\"",
+      "expected": "keywords_ready row with keyword_json",
+      "actual": "Recent rows include review-san-pham-skincare-e392ef6f|keywords_ready|1",
+      "passed": true
+    },
+    {
+      "name": "CHECK-06: Prompt caching",
+      "command": "grep -n \"cache_control\" backend/app/infra/ai_client.py",
+      "expected": "cache_control ephemeral present",
+      "actual": "Found cache_control type ephemeral in AIClient system prompt",
+      "passed": true
+    },
+    {
+      "name": "CHECK-07: KeywordPage UI",
+      "command": "curl -s http://127.0.0.1:5173 | grep -ci \"keyword|topic\"",
+      "expected": ">= 1",
+      "actual": "2",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp5-plan-generation"
+}

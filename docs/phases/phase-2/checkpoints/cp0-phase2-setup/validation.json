@@ -1,0 +1,47 @@
+{
+  "cp": "cp0-phase2-setup",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-29T08:54:30+07:00",
+  "summary": "Phase 2 checkpoint workspace exists, phase metadata is updated, and the dedicated dashboard project contains all 9 imported checkpoints.",
+  "checks": [
+    {
+      "name": "CHECK-01: Checkpoint workspace exists",
+      "command": "find docs/phases/phase-2/checkpoints -maxdepth 1 -type f | sort",
+      "expected": "README.md, config.json, notify.py, post-status.py present",
+      "actual": "README.md, config.example.json, config.json, notify.py, post-status.py present",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Project slug config",
+      "command": "cat docs/phases/phase-2/checkpoints/config.json",
+      "expected": "project_slug = social-listening-v3-phase-2",
+      "actual": "project_slug = social-listening-v3-phase-2",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Phase metadata",
+      "command": "cat .phase.json",
+      "expected": "phase-2 checkpoints = 9",
+      "actual": "phase-2 checkpoints = 9",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: Dashboard project imported",
+      "command": "curl -s http://localhost:3000/api/projects/social-listening-v3-phase-2",
+      "expected": "Project exists with 9 checkpoints",
+      "actual": "Project exists with 9 checkpoints and pending summary 0/9 validated before status updates",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Phase 2 architecture contract",
+      "command": "rg -n \"label_jobs|content_labels|read-time\" docs/phases/phase-2/architecture.md docs/phases/phase-2/user-stories.md",
+      "expected": "Docs mention label_jobs, content_labels, and read-time filter policy",
+      "actual": "Docs include all three concepts in architecture and stories",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp1-labeling-schema"
+}

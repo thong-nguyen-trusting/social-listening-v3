@@ -1,0 +1,14 @@
+{
+  "cp": "cp5-filtered-theme-api",
+  "role": "implementer",
+  "status": "READY",
+  "timestamp": "2026-03-29T09:40:00+07:00",
+  "summary": "Theme analysis now reads current labels with read-time audience policies and returns excluded-by-label counts and taxonomy metadata in the API response.",
+  "artifacts": [
+    { "file": "backend/app/services/audience_filter.py", "action": "created" },
+    { "file": "backend/app/services/insight.py", "action": "modified" },
+    { "file": "backend/app/api/insights.py", "action": "modified" },
+    { "file": "backend/app/schemas/insights.py", "action": "modified" }
+  ],
+  "issues": []
+}

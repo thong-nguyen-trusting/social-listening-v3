@@ -1,0 +1,47 @@
+{
+  "cp": "cp1-mantine-theme-foundation",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-29T07:54:16Z",
+  "summary": "Mantine 7 dependencies, theme files, provider wiring, and frontend build all validate against the Phase 4 foundation contract.",
+  "checks": [
+    {
+      "name": "CHECK-01: Mantine dependencies installed",
+      "command": "rg -n '\"@mantine/core\"|\"@mantine/hooks\"|\"@mantine/notifications\"|\"@fontsource-variable/inter\"' frontend/package.json",
+      "expected": "All four dependencies present",
+      "actual": "All four dependencies are present in frontend/package.json.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Central status map exists",
+      "command": "rg -n 'STATUS_MAP|normalizeStatus|getStatusLevel|getStatusColor' frontend/src/theme/status.ts",
+      "expected": "Status map + normalization helpers",
+      "actual": "theme/status.ts defines uppercase STATUS_MAP and normalization/color helpers.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Theme object exported",
+      "command": "rg -n 'createTheme|components:|fontFamilyMonospace' frontend/src/theme/index.ts",
+      "expected": "Mantine theme with overrides",
+      "actual": "theme/index.ts exports createTheme-based appTheme with typography, spacing, radius, shadows, and component defaults.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: ThemeProvider mounted",
+      "command": "rg -n 'MantineProvider|Notifications' frontend/src/app/providers/ThemeProvider.tsx frontend/src/main.tsx",
+      "expected": "Provider and notification host wired in main.tsx",
+      "actual": "ThemeProvider mounts MantineProvider + Notifications and main.tsx wraps App with it.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Frontend build passes",
+      "command": "cd frontend && npm run build",
+      "expected": "Build succeeds",
+      "actual": "Build succeeded during CP1 and again after final verification.",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp2-shared-shell-primitives"
+}

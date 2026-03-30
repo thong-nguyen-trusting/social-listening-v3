@@ -1,0 +1,61 @@
+{
+  "cp": "cp8-theme-analysis",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-28T20:42:50+07:00",
+  "summary": "CP8 validator passed: theme API returns valid taxonomy labels and sentiments, spam exclusion is counted, quotes stay masked, low-volume warning exists, and ThemesPage displays the insight output.",
+  "checks": [
+    {
+      "name": "CHECK-01: Theme API response",
+      "command": "GET /api/runs/run-b1494ee46d/themes",
+      "expected": "themes with label, dominant_sentiment, post_count, sample_quotes",
+      "actual": "4 themes returned with posts_crawled=12 and all required fields",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Theme labels in taxonomy",
+      "command": "Validate labels in API payload",
+      "expected": "pain_point | positive_feedback | question | comparison | other",
+      "actual": "question, pain_point, positive_feedback, comparison",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Sentiment labels",
+      "command": "Validate dominant_sentiment in API payload",
+      "expected": "positive | negative | neutral",
+      "actual": "neutral, negative, positive, neutral",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: Spam exclusion",
+      "command": "Inspect posts_excluded field",
+      "expected": "posts_excluded exists",
+      "actual": "posts_excluded=3",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: PII masked quotes",
+      "command": "Regex scan of sample_quotes from theme API",
+      "expected": "No raw phone or email",
+      "actual": "No phone or email patterns found in any sample quote",
+      "passed": true
+    },
+    {
+      "name": "CHECK-06: Low post count warning",
+      "command": "grep warning logic in backend/app/services/insight.py",
+      "expected": "Warning when < 10 clean posts",
+      "actual": "InsightService returns 'It hon 10 posts nen theme chi mang tinh dai dien.' when clean posts are low",
+      "passed": true
+    },
+    {
+      "name": "CHECK-07: ThemesPage UI",
+      "command": "grep theme/sentiment/quote markers in frontend/src/pages/ThemesPage.tsx",
+      "expected": "Theme rendering with sentiment labels and quotes",
+      "actual": "ThemesPage renders theme cards, sentiment badges, and sample quotes",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp9-smoke-test"
+}

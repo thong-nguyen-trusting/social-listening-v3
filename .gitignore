@@ -1,5 +1,28 @@
-# Facebook session data — NEVER commit this
-fb-session/
+# Python
+backend/venv/
+__pycache__/
+*.pyc
+*.db
 
-# Crawled data (large JSON files)
-crawled-data/
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Environment
+.env
+.env.local
+
+# Browser profile
+browser_profile/
+~/.social-listening/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Playwright CLI logs
+.playwright-cli/
+.phase.json

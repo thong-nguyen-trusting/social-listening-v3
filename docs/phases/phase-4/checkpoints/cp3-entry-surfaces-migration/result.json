@@ -1,0 +1,23 @@
+{
+  "cp": "cp3-entry-surfaces-migration",
+  "role": "implementer",
+  "status": "READY",
+  "timestamp": "2026-03-29T07:38:09Z",
+  "summary": "The app now renders inside AppLayout, the landing hero/checkpoint cards are removed, and Setup plus Health surfaces use shared status and metadata primitives.",
+  "artifacts": [
+    {
+      "file": "frontend/src/App.tsx",
+      "action": "modified"
+    },
+    {
+      "file": "frontend/src/components/HealthBadge.tsx",
+      "action": "modified"
+    },
+    {
+      "file": "frontend/src/pages/SetupPage.tsx",
+      "action": "modified"
+    }
+  ],
+  "issues": [],
+  "notes": "Build passes after entry-surface migration. Dashboard checkpoint import is still pending."
+}

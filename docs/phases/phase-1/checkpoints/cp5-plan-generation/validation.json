@@ -1,0 +1,61 @@
+{
+  "cp": "cp5-plan-generation",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-28T20:14:28+07:00",
+  "summary": "CP5 validator passed: plan generation returns ordered typed steps, write actions are classified correctly, refinement increments version, and the plan persists in DB and UI.",
+  "checks": [
+    {
+      "name": "CHECK-01: Plan with ordered steps",
+      "command": "POST /api/plans for a keywords_ready context",
+      "expected": ">= 2 steps with action_type, read_or_write, target, estimated_count, risk_level",
+      "actual": "plan-f9f68de2 returned 3 ordered steps with all required fields",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Write action classification",
+      "command": "Inspect generated plan before refinement",
+      "expected": "JOIN_GROUP is WRITE with MEDIUM/HIGH risk",
+      "actual": "write-step-id is JOIN_GROUP with read_or_write=WRITE and risk_level=HIGH",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: NL refinement + versioning",
+      "command": "PATCH /api/plans/plan-f9f68de2 {\"instruction\":\"chi crawl 2 groups thoi\"}",
+      "expected": "version > 1",
+      "actual": "version=2 with step count reduced from 3 to 2",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: Plan in DB",
+      "command": "sqlite3 backend/app.db \"SELECT plan_id, version, status FROM plans WHERE plan_id='plan-f9f68de2';\"",
+      "expected": "Persisted plan row",
+      "actual": "plan-f9f68de2|2|ready",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: GET plan",
+      "command": "GET /api/plans/plan-f9f68de2",
+      "expected": "plan_id and steps returned",
+      "actual": "GET returned version=2 with 2 steps",
+      "passed": true
+    },
+    {
+      "name": "CHECK-06: PlanPage UI write action highlight",
+      "command": "grep -niE \"write.*action|WRITE|risk.*high|warning|canh-bao\" frontend/src/pages/PlanPage.tsx",
+      "expected": "Evidence of write-action highlighting",
+      "actual": "PlanPage renders 'Write Action' label and plan-step-write styling",
+      "passed": true
+    },
+    {
+      "name": "CHECK-07: Step dependencies",
+      "command": "GET /api/plans/plan-f9f68de2 and inspect dependency_step_ids",
+      "expected": "Logical dependency ordering",
+      "actual": "CRAWL_FEED depends on step-1 SEARCH_GROUPS",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp6-review-approve"
+}

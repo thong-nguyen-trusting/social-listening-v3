@@ -1,0 +1,14 @@
+{
+  "cp": "cp7-themes-audience-ui",
+  "role": "implementer",
+  "status": "READY",
+  "timestamp": "2026-03-29T09:40:00+07:00",
+  "summary": "Themes UI now supports audience presets, refetches by filter, shows excluded-by-label breakdown, and disables controls while requests are running.",
+  "artifacts": [
+    { "file": "frontend/src/pages/ThemesPage.tsx", "action": "modified" },
+    { "file": "frontend/src/lib/api.ts", "action": "modified" },
+    { "file": "frontend/src/styles.css", "action": "modified" },
+    { "file": "frontend/src/App.tsx", "action": "modified" }
+  ],
+  "issues": []
+}

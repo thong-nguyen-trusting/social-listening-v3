@@ -1,0 +1,47 @@
+{
+  "cp": "cp1-labeling-schema",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-29T09:40:00+07:00",
+  "summary": "Migration 008 upgrades and downgrades cleanly on a temporary SQLite database and locks the Phase 2 labeling schema in DB constraints.",
+  "checks": [
+    {
+      "name": "CHECK-01: Alembic upgrade head",
+      "command": "cd backend && SQLITE_DB_PATH=/tmp/social-listening-phase2.sqlite venv/bin/alembic upgrade head",
+      "expected": "Head revision = 008_add_labeling_tables",
+      "actual": "Upgrade succeeded and alembic current reports 008_add_labeling_tables (head)",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: New tables exist",
+      "command": "sqlite3 /tmp/social-listening-phase2.sqlite \"select name from sqlite_master where type='table' order by name;\"",
+      "expected": "label_jobs and content_labels present",
+      "actual": "Tables list includes label_jobs and content_labels",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Crawled posts summary columns",
+      "command": "sqlite3 /tmp/social-listening-phase2.sqlite \"pragma table_info(crawled_posts);\"",
+      "expected": "label_status and current_label_id columns exist",
+      "actual": "pragma table_info(crawled_posts) shows label_status and current_label_id",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: DB taxonomy constraints locked",
+      "command": "sqlite3 /tmp/social-listening-phase2.sqlite \"select sql from sqlite_master where name in ('label_jobs','content_labels','crawled_posts');\"",
+      "expected": "status and taxonomy enums locked in SQL constraints",
+      "actual": "label_jobs/content_labels/crawled_posts SQL includes ck_label_jobs_status, uq_label_jobs_run_taxonomy_version, ck_content_labels_* and ck_crawled_posts_label_status",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Downgrade then upgrade cleanly",
+      "command": "cd backend && SQLITE_DB_PATH=/tmp/social-listening-phase2.sqlite venv/bin/alembic downgrade 007_add_crawled_post_metadata && SQLITE_DB_PATH=/tmp/social-listening-phase2.sqlite venv/bin/alembic upgrade head",
+      "expected": "Downgrade to 007 and upgrade back to 008 succeed",
+      "actual": "Both commands passed when executed sequentially",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp2-taxonomy-prompt"
+}

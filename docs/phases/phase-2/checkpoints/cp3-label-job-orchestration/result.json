@@ -1,0 +1,16 @@
+{
+  "cp": "cp3-label-job-orchestration",
+  "role": "implementer",
+  "status": "READY",
+  "timestamp": "2026-03-29T09:40:00+07:00",
+  "summary": "Label jobs now have their own API, summary read model, background orchestration, and startup resume flow without mutating crawl run state.",
+  "artifacts": [
+    { "file": "backend/app/services/label_job_service.py", "action": "created" },
+    { "file": "backend/app/api/labels.py", "action": "created" },
+    { "file": "backend/app/schemas/labels.py", "action": "created" },
+    { "file": "backend/app/infrastructure/lifespan.py", "action": "modified" },
+    { "file": "backend/app/main.py", "action": "modified" },
+    { "file": "backend/app/services/runner.py", "action": "modified" }
+  ],
+  "issues": []
+}

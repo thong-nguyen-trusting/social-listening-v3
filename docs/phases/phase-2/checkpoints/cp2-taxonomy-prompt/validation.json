@@ -1,0 +1,47 @@
+{
+  "cp": "cp2-taxonomy-prompt",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-29T09:40:00+07:00",
+  "summary": "The labeling taxonomy, prompt contract, heuristic signals, and fallback behavior are locked and parsable as JSON-ready contracts.",
+  "checks": [
+    {
+      "name": "CHECK-01: Prompt file JSON-only",
+      "command": "sed -n '1,80p' backend/app/skills/content_labeling.md",
+      "expected": "Prompt exists and enforces JSON-only output",
+      "actual": "Prompt starts with CONTENT_LABELING and explicitly says Return valid JSON only. No markdown fences.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Taxonomy constants match docs",
+      "command": "sed -n '1,220p' backend/app/domain/label_taxonomy.py",
+      "expected": "author_role, content_intent, commerciality, relevance, source, audience presets defined",
+      "actual": "label_taxonomy.py defines AUTHOR_ROLES, CONTENT_INTENTS, COMMERCIALITY_LEVELS, USER_FEEDBACK_RELEVANCE_LEVELS, LABEL_SOURCES, LABEL_JOB_STATUSES, LABEL_RECORD_STATUSES, AUDIENCE_FILTERS and TAXONOMY_VERSION=v1",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Heuristic markers",
+      "command": "sed -n '1,240p' backend/app/services/labeling_heuristics.py",
+      "expected": "seller/end-user/official markers exist",
+      "actual": "Heuristics include SELLER_PATTERNS, OFFICIAL_PATTERNS, ADMIN_PATTERNS, QUESTION_PATTERNS, EXPERIENCE_PATTERNS, SUPPORT_PATTERNS, and COMPARISON_PATTERNS",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: Fallback rules documented in code",
+      "command": "rg -n \"fallback_label|ai_missing_record_output|label_source\":? backend/app/services/content_labeling.py backend/app/services/labeling_heuristics.py",
+      "expected": "Fallback path is explicit and non-silent",
+      "actual": "fallback_label() returns a fallback payload and ContentLabelingService uses ai_missing_record_output when AI omits a record",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Prompt sample parses to JSON schema",
+      "command": "ANTHROPIC_API_KEY= PYTHONPATH=backend backend/venv/bin/python <mock content_labeling sample>",
+      "expected": "records[] JSON payload with taxonomy fields",
+      "actual": "Mock AIClient returned {records:[{post_id:'p1', author_role:'end_user', content_intent:'question', commerciality_level:'low', user_feedback_relevance:'high', label_confidence:0.78, label_source:'ai', taxonomy_version:'v1'}]}",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp3-label-job-orchestration"
+}

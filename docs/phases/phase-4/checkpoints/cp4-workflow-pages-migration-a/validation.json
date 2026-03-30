@@ -1,0 +1,47 @@
+{
+  "cp": "cp4-workflow-pages-migration-a",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-29T07:54:16Z",
+  "summary": "Keyword, Plan, and Approve workflows use Mantine/shared primitives, preserve their data flow, and build cleanly.",
+  "checks": [
+    {
+      "name": "CHECK-01: KeywordPage migrated to Mantine inputs",
+      "command": "python3 -c \"from pathlib import Path; t=Path('frontend/src/pages/KeywordPage.tsx').read_text(); print('TextInput' in t and 'Textarea' in t and 'className=\\\"text-input\\\"' not in t)\"",
+      "expected": "True",
+      "actual": "True",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: PlanPage uses StatusBadge and Paper",
+      "command": "python3 -c \"from pathlib import Path; t=Path('frontend/src/pages/PlanPage.tsx').read_text(); print('StatusBadge' in t and 'Paper' in t and 'plan-step' not in t)\"",
+      "expected": "True",
+      "actual": "True",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: ApprovePage uses Checkbox and ActionBar",
+      "command": "python3 -c \"from pathlib import Path; t=Path('frontend/src/pages/ApprovePage.tsx').read_text(); print('Checkbox' in t and 'ActionBar' in t and 'approve-item' not in t)\"",
+      "expected": "True",
+      "actual": "True",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: API/state contracts preserved",
+      "command": "rg -n 'fetchJson|initialContextId|initialPlanId|onPlanReady|onRunReady' frontend/src/pages/KeywordPage.tsx frontend/src/pages/PlanPage.tsx frontend/src/pages/ApprovePage.tsx",
+      "expected": "Existing fetch/state props remain present",
+      "actual": "Original fetchJson usage and prop contracts remain present in all three pages.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Frontend build passes",
+      "command": "cd frontend && npm run build",
+      "expected": "Build succeeds",
+      "actual": "Build succeeded after workflow migration A and at final verification.",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp5-workflow-pages-migration-b"
+}

@@ -1,0 +1,47 @@
+{
+  "cp": "cp6-monitor-labeling-ui",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-29T09:40:00+07:00",
+  "summary": "The monitor page has a separate labeling trust panel, clear CTA state, and uses the summary API without disturbing run stream behavior.",
+  "checks": [
+    {
+      "name": "CHECK-01: Separate labeling section exists",
+      "command": "rg -n \"Start Labeling|labeling status|labels:\" frontend/src/pages/MonitorPage.tsx frontend/dist/assets/*.js",
+      "expected": "Monitor has a dedicated labeling UI",
+      "actual": "Source and built bundle include Start Labeling, labeling status, and labels status copy",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Progress counters shown",
+      "command": "sed -n '1,320p' frontend/src/pages/MonitorPage.tsx",
+      "expected": "records_total/labeled/fallback/failed visible",
+      "actual": "Monitor renders labeled/total plus fallback and failed counts from LabelSummaryResponse",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Labeling UI does not replace run stream",
+      "command": "Review MonitorPage state and layout",
+      "expected": "Crawl stream panel remains intact",
+      "actual": "run step list and event log remain separate from labelSummary state and label-panel",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: Loading and error states",
+      "command": "Review MonitorPage CTA labels and error rendering",
+      "expected": "Loading/error UX is explicit",
+      "actual": "Monitor uses Refreshing Labels..., Starting Labeling..., and renders labelError separately from run error",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Warning when labeling still running",
+      "command": "GET /api/runs/run-755de99fc7/labels/summary while job is RUNNING (observed during backfill)",
+      "expected": "Soft warning present",
+      "actual": "Summary returned warning='Labeling is still in progress. Theme filters may shift...' and MonitorPage renders warning-copy",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp7-themes-audience-ui"
+}

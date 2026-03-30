@@ -1,0 +1,47 @@
+{
+  "cp": "cp8-audit-backfill-smoke",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-29T09:40:00+07:00",
+  "summary": "A full Phase 2 smoke run succeeds against a real backfilled run, with audit samples and a persisted demo log for dashboard review.",
+  "checks": [
+    {
+      "name": "CHECK-01: End-to-end labeling + filtered themes flow",
+      "command": "python3 backend/tests/labeling_smoke.py --base-url http://127.0.0.1:8000 --run-id run-755de99fc7",
+      "expected": "Script exits 0 and returns summary/themes/audit payload",
+      "actual": "Smoke script exited successfully and produced DONE summary plus all 3 audience filter payloads",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Backfill old run succeeds",
+      "command": "GET /api/runs/run-755de99fc7/labels/summary",
+      "expected": "Old run is labeled successfully",
+      "actual": "run-755de99fc7 summary is DONE with 77/77 labeled",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Audit sample exposes label reason",
+      "command": "GET /api/runs/run-755de99fc7/records?label_filter=excluded&limit=3",
+      "expected": "Records include label metadata and reason",
+      "actual": "Audit sample includes community_admin / seller_affiliate labels and label_reason values such as admin_or_group_rule_markers_detected and promotion_markers_detected",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: No crash after final rebuild",
+      "command": "curl -sS http://127.0.0.1:8000/health",
+      "expected": "App healthy after final restart",
+      "actual": "{\"status\":\"ok\",\"version\":\"0.1.0\"}",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Demo log written",
+      "command": "sed -n '1,220p' docs/phases/phase-2/checkpoints/cp8-audit-backfill-smoke/DEMO_LOG.md",
+      "expected": "Demo log exists with labeling and themes summary",
+      "actual": "DEMO_LOG.md records run_id, label_job_id, role counts, 3 audience presets, and audit sample rows",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": false,
+  "next_cp": ""
+}

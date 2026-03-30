@@ -1,0 +1,40 @@
+{
+  "cp": "cp5-workflow-pages-migration-b",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-29T07:54:16Z",
+  "summary": "Monitor and Themes pages now render through shared status badges, Mantine containers, segmented filters, and continue to build cleanly.",
+  "checks": [
+    {
+      "name": "CHECK-01: MonitorPage uses StatusBadge across statuses",
+      "command": "python3 -c \"from pathlib import Path; t=Path('frontend/src/pages/MonitorPage.tsx').read_text(); print(t.count('StatusBadge') >= 4 and 'monitor-step-' not in t)\"",
+      "expected": "True",
+      "actual": "True",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: MonitorPage uses Mantine panels/chips",
+      "command": "python3 -c \"from pathlib import Path; t=Path('frontend/src/pages/MonitorPage.tsx').read_text(); print('Badge' in t and 'Paper' in t and 'label-chip' not in t and 'event-log' not in t)\"",
+      "expected": "True",
+      "actual": "True",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: ThemesPage uses SegmentedControl and StatusBadge",
+      "command": "python3 -c \"from pathlib import Path; t=Path('frontend/src/pages/ThemesPage.tsx').read_text(); print('SegmentedControl' in t and 'StatusBadge' in t and 'filter-chip' not in t and 'sentiment-' not in t)\"",
+      "expected": "True",
+      "actual": "True",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: Frontend build passes",
+      "command": "cd frontend && npm run build",
+      "expected": "Build succeeds",
+      "actual": "Build succeeded after workflow migration B and at final verification.",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp6-css-cleanup-build-gate"
+}

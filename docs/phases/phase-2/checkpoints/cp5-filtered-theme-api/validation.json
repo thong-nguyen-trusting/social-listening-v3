@@ -1,0 +1,47 @@
+{
+  "cp": "cp5-filtered-theme-api",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-29T09:40:00+07:00",
+  "summary": "The themes API honors audience presets at read time and echoes excluded-by-label breakdowns without writing new labeling state.",
+  "checks": [
+    {
+      "name": "CHECK-01: Themes endpoint with end_user_only",
+      "command": "GET /api/runs/run-755de99fc7/themes?audience_filter=end_user_only",
+      "expected": "Payload includes filtered counts and themes",
+      "actual": "Returned posts_included=31, posts_excluded=46, excluded_by_label_count=46, themes=5",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Include seller changes counts",
+      "command": "GET /themes with end_user_only / include_seller / include_brand",
+      "expected": "Counts change by preset",
+      "actual": "Included counts changed 31 -> 33 -> 39 across end_user_only, include_seller, include_brand",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Excluded-by-label summary",
+      "command": "Inspect themes payload",
+      "expected": "excluded_by_label_count and breakdown exist",
+      "actual": "Payload includes excluded_by_label_count and excluded_breakdown such as low_relevance/brand_official/seller_affiliate",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: Read-time policy only",
+      "command": "Repeat themes requests then query content_labels for run-755de99fc7",
+      "expected": "Filter switch does not create new labels or mutate crawl run",
+      "actual": "content_labels stayed at 77 rows with 1 distinct label_job_id after multiple filter requests; only theme payload changed",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Response echoes taxonomy and filter",
+      "command": "Inspect themes payload fields",
+      "expected": "audience_filter and taxonomy_version returned",
+      "actual": "Responses echo audience_filter values and taxonomy_version=v1",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp6-monitor-labeling-ui"
+}

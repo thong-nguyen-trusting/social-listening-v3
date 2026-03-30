@@ -1,0 +1,47 @@
+{
+  "cp": "cp2-shared-shell-primitives",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-29T07:54:16Z",
+  "summary": "Shared shell and five UI primitives exist, compile cleanly, and provide the base contract used across all migrated pages.",
+  "checks": [
+    {
+      "name": "CHECK-01: AppLayout uses AppShell",
+      "command": "rg -n 'AppShell|Container' frontend/src/app/shell/AppLayout.tsx",
+      "expected": "AppShell + Container shell wrapper",
+      "actual": "AppLayout wraps content with AppShell and Container.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: AppHeader provides identity, links, and toggle",
+      "command": "rg -n 'Social Listening v3|ActionIcon|apiUrl' frontend/src/app/shell/AppHeader.tsx",
+      "expected": "Header identity, API links, and theme toggle",
+      "actual": "AppHeader includes app name, API quick links, and an ActionIcon-based color scheme toggle.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Primitive files exist",
+      "command": "test -f frontend/src/components/ui/PageSection.tsx && test -f frontend/src/components/ui/PageHeader.tsx && test -f frontend/src/components/ui/StatusBadge.tsx && test -f frontend/src/components/ui/ActionBar.tsx && test -f frontend/src/components/ui/KeyValueRow.tsx",
+      "expected": "All five primitive files exist",
+      "actual": "All five primitive files exist.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: StatusBadge uses shared color helper",
+      "command": "rg -n 'getStatusColor|normalizeStatus|Badge' frontend/src/components/ui/StatusBadge.tsx",
+      "expected": "Shared badge implementation",
+      "actual": "StatusBadge normalizes input and uses the central theme/status helper.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Frontend build passes",
+      "command": "cd frontend && npm run build",
+      "expected": "Build succeeds",
+      "actual": "Build succeeded after primitives were added and again at final verification.",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp3-entry-surfaces-migration"
+}

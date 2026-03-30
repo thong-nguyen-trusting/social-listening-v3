@@ -1,0 +1,61 @@
+{
+  "cp": "cp3-health-monitor",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-28T20:57:00+07:00",
+  "summary": "Health monitor validator passed: state machine transitions, cooldown gate, audit log, UI marker, and EventBus dispatch are all working.",
+  "checks": [
+    {
+      "name": "CHECK-01: Default HEALTHY status",
+      "command": "curl -s http://localhost:8000/api/health/status",
+      "expected": "status=HEALTHY",
+      "actual": "status=HEALTHY",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: CAPTCHA signal -> BLOCKED",
+      "command": "POST /api/health/_test/signal {\"signal\":\"CAPTCHA\"} then GET /api/health/status",
+      "expected": "BLOCKED with cooldown_until",
+      "actual": "BLOCKED with non-null cooldown_until",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Action-blocked signal -> CAUTION",
+      "command": "POST /api/health/_test/signal {\"signal\":\"ACTION_BLOCKED\"} then GET /api/health/status",
+      "expected": "CAUTION",
+      "actual": "CAUTION",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: Audit log",
+      "command": "sqlite3 backend/app.db \"SELECT signal_type, status_before, status_after FROM account_health_log ...\"",
+      "expected": "Transitions present",
+      "actual": "CAPTCHA and ACTION_BLOCKED transitions logged",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Reset chi khi cooldown het",
+      "command": "POST /api/health/reset immediately after CAPTCHA",
+      "expected": "HTTP 400",
+      "actual": "HTTP 400",
+      "passed": true
+    },
+    {
+      "name": "CHECK-06: HealthBadge UI",
+      "command": "curl -s http://localhost:5173 | grep -ci \"health|badge|status\"",
+      "expected": ">= 1",
+      "actual": "1",
+      "passed": true
+    },
+    {
+      "name": "CHECK-07: EventBus dispatch",
+      "command": "python -c \"... EventBus ...\"",
+      "expected": "PASS",
+      "actual": "PASS",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp4-keyword-analysis"
+}

@@ -1,0 +1,62 @@
+{
+  "phase": "phase-5",
+  "display_name": "Social Listening v3.5",
+  "title": "Phase 5 — Resilient AI Routing & Release Notes",
+  "summary": "Phase 5 chuyển luồng AI mặc định sang endpoint marketplace OpenAI-compatible, chỉ dùng Claude khi timeout, và đưa release notes vào trực tiếp product shell để end user theo dõi thay đổi theo phase.",
+  "published_at": "2026-03-29",
+  "status": "active",
+  "hero": {
+    "eyebrow": "Release Notes",
+    "headline": "Nhanh hơn ở đường AI, rõ ràng hơn ở mỗi lần ship phase",
+    "subheadline": "Bản phát hành này tập trung vào reliability của model call và communication cho end user: request AI đi theo default path mới, fallback giữ tính kiểm soát, và mọi thay đổi chính của phase đều có page riêng trong app."
+  },
+  "highlights": [
+    {
+      "title": "Marketplace model là đường mặc định",
+      "description": "Tất cả AI request đi qua endpoint OpenAI-compatible tại llm.chiasegpu.vn trước, thay vì mặc định gọi Claude."
+    },
+    {
+      "title": "Claude chỉ fallback khi timeout",
+      "description": "Giữ Claude làm safety net cho timeout, nhưng không dùng để che các lỗi cấu hình hoặc tích hợp khác."
+    },
+    {
+      "title": "Release note có link ngay trong shell",
+      "description": "Người dùng có thể mở page release note từ header để xem thay đổi mới mà không cần lục docs nội bộ."
+    },
+    {
+      "title": "Tên app phản ánh phase hiện hành",
+      "description": "Shell và browser title giờ hiển thị theo format Social Listening v3.5 để người dùng nhận diện nhanh milestone build."
+    }
+  ],
+  "sections": [
+    {
+      "title": "What changed for end users",
+      "items": [
+        "Header có link Release Notes dẫn tới một page trình bày gọn, rõ và thân thiện.",
+        "Tên sản phẩm trong shell đổi từ Social Listening v3 sang Social Listening v3.5.",
+        "Thông điệp phát hành được gom theo phase thay vì nằm rải rác trong tài liệu kỹ thuật."
+      ]
+    },
+    {
+      "title": "What changed under the hood",
+      "items": [
+        "AI runtime ưu tiên endpoint marketplace `/v1/chat/completions` làm default request path.",
+        "Fallback sang Claude chỉ diễn ra khi request default path timeout.",
+        "Metadata phase và release note được đọc từ artifact trong repo để UI không phải hard-code."
+      ]
+    },
+    {
+      "title": "Why this matters",
+      "items": [
+        "Đội vận hành có một điểm điều phối provider duy nhất để debug và thay đổi cấu hình.",
+        "End user nhìn thấy thay đổi được đóng gói theo phase, dễ hiểu hơn thay vì đọc log kỹ thuật.",
+        "Shell phản ánh milestone hiện hành, giảm nhầm lẫn giữa các lần bàn giao."
+      ]
+    }
+  ],
+  "story_refs": ["US-50", "US-51", "US-52", "US-53"],
+  "cta": {
+    "label": "Open workflow",
+    "href": "#/"
+  }
+}

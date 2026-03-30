@@ -1,0 +1,46 @@
+{
+  "cp": "cp6-css-cleanup-build-gate",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-29T08:27:51Z",
+  "summary": "Phase 4 is complete: legacy CSS is reduced to resets, the shared shell smoke remains intact, the final build passes, and the project has been redeployed successfully on the final runtime config.",
+  "checks": [
+    {
+      "name": "CHECK-01: styles.css reduced to global resets",
+      "command": "wc -l frontend/src/styles.css && rg -n '\\.workflow-card|\\.setup-card|\\.health-panel|\\.theme-card|\\.monitor-step' frontend/src/styles.css",
+      "expected": "<10 lines and no legacy selectors",
+      "actual": "styles.css has 9 lines and no legacy class selectors.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Final deployment is healthy",
+      "command": "docker compose ps && curl -s http://127.0.0.1:8000/health",
+      "expected": "Container healthy and /health returns ok on the final deploy",
+      "actual": "social-listening-v3 is healthy after final redeploy and /health returned {\"status\":\"ok\",\"version\":\"0.1.0\"}.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Frontend build passes on final code",
+      "command": "cd frontend && npm run build",
+      "expected": "Build succeeds",
+      "actual": "Final local build succeeded, and Docker frontend builder step also succeeded.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: Shared shell smoke log confirms migrated UI",
+      "command": "cat docs/phases/phase-4/checkpoints/cp6-css-cleanup-build-gate/DEMO_LOG.md",
+      "expected": "Demo log confirms hero removal, shared shell usage, and header/theme toggle presence",
+      "actual": "DEMO_LOG.md confirms hero/checkpoint removal, AppHeader + theme toggle presence, AppLayout shell usage, and all major pages rendering through the shared shell.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Final runtime uses live-browser config",
+      "command": "docker inspect social-listening-v3 --format '{{range .Config.Env}}{{println .}}{{end}}' | rg '^BROWSER_MOCK_MODE=' && curl -s http://127.0.0.1:8000/api/browser/status",
+      "expected": "BROWSER_MOCK_MODE=false and browser session VALID",
+      "actual": "Final container is running with BROWSER_MOCK_MODE=false, and /api/browser/status returned session_status=VALID with health_status=HEALTHY.",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": false
+}

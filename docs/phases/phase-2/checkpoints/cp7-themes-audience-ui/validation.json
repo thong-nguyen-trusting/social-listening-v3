@@ -1,0 +1,47 @@
+{
+  "cp": "cp7-themes-audience-ui",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-29T09:40:00+07:00",
+  "summary": "Themes UI exposes the three Phase 2 audience presets, refetches against the new API, and renders excluded-by-label breakdowns with disabled CTA states.",
+  "checks": [
+    {
+      "name": "CHECK-01: Three preset filters",
+      "command": "rg -n \"End-user only|Include seller|Include brand\" frontend/src/pages/ThemesPage.tsx frontend/dist/assets/*.js",
+      "expected": "All three presets exist",
+      "actual": "Built UI contains End-user only, Include seller, and Include brand",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Filter switch refetches themes",
+      "command": "Review handleFilterChange in ThemesPage and compare API outputs",
+      "expected": "Switching preset triggers new themes request",
+      "actual": "handleFilterChange calls loadThemes(nextFilter), and API outputs changed from 31 to 33 to 39 included posts across presets",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Excluded-by-label summary shown",
+      "command": "Inspect ThemesPage render path",
+      "expected": "excluded by label and breakdown visible",
+      "actual": "ThemesPage renders excluded_by_label_count and excluded_breakdown chips",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: CTA disabled while loading",
+      "command": "Inspect ThemesPage button props",
+      "expected": "Load and filter buttons disable during request",
+      "actual": "Load Themes button disables on isLoading and filter chips also disable while loading",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Default filter is End-user only",
+      "command": "Inspect ThemesPage initial state",
+      "expected": "audienceFilter defaults to end_user_only",
+      "actual": "ThemesPage initializes audienceFilter state to end_user_only",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp8-audit-backfill-smoke"
+}

@@ -1,0 +1,47 @@
+{
+  "cp": "cp3-entry-surfaces-migration",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-29T07:54:16Z",
+  "summary": "The root app shell, HealthBadge, and SetupPage now use shared shell/primitives and no longer depend on the old landing-page layout.",
+  "checks": [
+    {
+      "name": "CHECK-01: Hero and checkpoint cards removed",
+      "command": "python3 -c \"from pathlib import Path; t=Path('frontend/src/App.tsx').read_text(); print('className=\\\"hero\\\"' not in t and 'const checkpoints' not in t)\"",
+      "expected": "True",
+      "actual": "True",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: App uses AppLayout and SimpleGrid",
+      "command": "rg -n 'AppLayout|SimpleGrid' frontend/src/App.tsx",
+      "expected": "Shell-based root layout",
+      "actual": "App.tsx renders AppLayout with two SimpleGrid sections.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: HealthBadge and SetupPage use StatusBadge",
+      "command": "rg -n 'StatusBadge' frontend/src/components/HealthBadge.tsx frontend/src/pages/SetupPage.tsx",
+      "expected": "Shared status badge usage",
+      "actual": "Both files use StatusBadge for health/session state rendering.",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: Legacy health/setup classes removed",
+      "command": "python3 -c \"from pathlib import Path; t1=Path('frontend/src/components/HealthBadge.tsx').read_text(); t2=Path('frontend/src/pages/SetupPage.tsx').read_text(); print('health-panel' not in t1 and 'setup-card' not in t2)\"",
+      "expected": "True",
+      "actual": "True",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Frontend build passes",
+      "command": "cd frontend && npm run build",
+      "expected": "Build succeeds",
+      "actual": "Build succeeded after entry surface migration and at final verification.",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp4-workflow-pages-migration-a"
+}

@@ -1,0 +1,61 @@
+{
+  "cp": "cp0-environment",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-28T20:46:00+07:00",
+  "summary": "All 7 CP0 checks passed after upgrading python3 to 3.12.13 and rebuilding the backend environment on that runtime.",
+  "checks": [
+    {
+      "name": "CHECK-01: Python version",
+      "command": "python3 --version",
+      "expected": "Python 3.12+",
+      "actual": "Python 3.12.13",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: Backend dependencies",
+      "command": "pip freeze | grep -E 'fastapi|uvicorn|sqlalchemy|anthropic|camoufox'",
+      "expected": "5 packages present",
+      "actual": "anthropic==0.52.2, camoufox==0.4.11, fastapi==0.115.14, SQLAlchemy==2.0.48, uvicorn==0.34.3",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: Camoufox binary",
+      "command": "python -c 'from camoufox.async_api import AsyncCamoufox; print(\"OK\")'",
+      "expected": "OK",
+      "actual": "OK",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: Backend server",
+      "command": "uvicorn app.main:app --port 8765 + curl /health",
+      "expected": "{\"status\":\"ok\",\"version\":\"0.1.0\"}",
+      "actual": "{\"status\":\"ok\",\"version\":\"0.1.0\"}",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: Frontend dev server",
+      "command": "npm run dev + curl localhost:5174",
+      "expected": "HTTP 200",
+      "actual": "HTTP 200, Vite v6.4.1",
+      "passed": true
+    },
+    {
+      "name": "CHECK-06: Alembic config",
+      "command": "alembic current",
+      "expected": "Exit 0",
+      "actual": "Exit 0, SQLiteImpl context initialized",
+      "passed": true
+    },
+    {
+      "name": "CHECK-07: .gitignore",
+      "command": "cat .gitignore | grep -cE 'venv|node_modules|.env|browser_profile|.db'",
+      "expected": ">= 4",
+      "actual": "6",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp1-schema-lock"
+}

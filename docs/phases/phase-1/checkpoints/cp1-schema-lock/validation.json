@@ -1,0 +1,61 @@
+{
+  "cp": "cp1-schema-lock",
+  "role": "validator",
+  "status": "PASS",
+  "timestamp": "2026-03-28T20:45:00+07:00",
+  "summary": "All 7 CP1 checks passed. Migration upgrade, downgrade, constraints, and model imports are all clean.",
+  "checks": [
+    {
+      "name": "CHECK-01: Alembic upgrade head",
+      "command": "cd backend && source venv/bin/activate && alembic upgrade head",
+      "expected": "EXIT: 0",
+      "actual": "EXIT: 0",
+      "passed": true
+    },
+    {
+      "name": "CHECK-02: 9 tables exist",
+      "command": "cd backend && sqlite3 app.db \".tables\"",
+      "expected": "All core tables present",
+      "actual": "account_health_log, account_health_state, approval_grants, crawled_posts, plan_runs, plan_steps, plans, product_contexts, step_runs, theme_results, alembic_version",
+      "passed": true
+    },
+    {
+      "name": "CHECK-03: theme_results.dominant_sentiment",
+      "command": "cd backend && sqlite3 app.db \".schema theme_results\" | grep -i dominant_sentiment",
+      "expected": "dominant_sentiment with positive/negative/neutral check",
+      "actual": "dominant_sentiment column and CHECK constraint present",
+      "passed": true
+    },
+    {
+      "name": "CHECK-04: account_health_state session fields",
+      "command": "cd backend && sqlite3 app.db \".schema account_health_state\" | grep -E \"session_status|account_id_hash\"",
+      "expected": "session_status and account_id_hash present",
+      "actual": "Both columns present",
+      "passed": true
+    },
+    {
+      "name": "CHECK-05: plan_steps.action_type constraint",
+      "command": "cd backend && sqlite3 app.db \".schema plan_steps\" | grep -i action_type",
+      "expected": "All 5 action_type values present in CHECK constraint",
+      "actual": "CRAWL_FEED, JOIN_GROUP, CRAWL_COMMENTS, CRAWL_GROUP_META, SEARCH_GROUPS present",
+      "passed": true
+    },
+    {
+      "name": "CHECK-06: Migration roundtrip",
+      "command": "cd backend && source venv/bin/activate && alembic downgrade base && alembic upgrade head",
+      "expected": "EXIT: 0",
+      "actual": "EXIT: 0",
+      "passed": true
+    },
+    {
+      "name": "CHECK-07: Models importable",
+      "command": "cd backend && source venv/bin/activate && python -c \"...\"",
+      "expected": "OK: N tables (N >= 9)",
+      "actual": "OK: 10 tables",
+      "passed": true
+    }
+  ],
+  "issues": [],
+  "ready_for_next_cp": true,
+  "next_cp": "cp2-browser-session"
+}

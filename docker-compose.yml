@@ -1,0 +1,46 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: social-listening-v3
+    ports:
+      - "${APP_PORT:-8000}:8000"
+      - "${VNC_PORT:-6080}:6080"
+    volumes:
+      - browser_profile:/root/.social-listening/browser_profile
+      - sqlite_data:/data
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPAQUE_ID_SECRET: ${OPAQUE_ID_SECRET}
+      VNC_PASSWORD: ${VNC_PASSWORD:-}
+      DISPLAY: :99
+      SQLITE_DB_PATH: ${SQLITE_DB_PATH:-/data/app.db}
+      BROWSER_PROFILE_DIR: ${BROWSER_PROFILE_DIR:-/root/.social-listening/browser_profile}
+      BROWSER_MOCK_MODE: ${BROWSER_MOCK_MODE:-false}
+      CAMOUFOX_HEADLESS: ${CAMOUFOX_HEADLESS:-false}
+      BROWSER_SCREEN_WIDTH: ${BROWSER_SCREEN_WIDTH:-1600}
+      BROWSER_SCREEN_HEIGHT: ${BROWSER_SCREEN_HEIGHT:-900}
+      KEYWORD_ANALYSIS_MODEL: ${KEYWORD_ANALYSIS_MODEL:-claude-haiku-4-5}
+      KEYWORD_ANALYSIS_THINKING: ${KEYWORD_ANALYSIS_THINKING:-false}
+      PLAN_GENERATION_MODEL: ${PLAN_GENERATION_MODEL:-claude-haiku-4-5}
+      PLAN_GENERATION_THINKING: ${PLAN_GENERATION_THINKING:-false}
+      PLAN_REFINEMENT_MODEL: ${PLAN_REFINEMENT_MODEL:-claude-haiku-4-5}
+      PLAN_REFINEMENT_THINKING: ${PLAN_REFINEMENT_THINKING:-false}
+      THEME_ANALYSIS_MODEL: ${THEME_ANALYSIS_MODEL:-claude-haiku-4-5}
+      CONTENT_LABELING_MODEL: ${CONTENT_LABELING_MODEL:-claude-haiku-4-5}
+      LABEL_TAXONOMY_VERSION: ${LABEL_TAXONOMY_VERSION:-v1}
+      LABEL_BATCH_SIZE: ${LABEL_BATCH_SIZE:-20}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  browser_profile:
+    name: slv3-browser-profile
+  sqlite_data:
+    name: slv3-sqlite-data
