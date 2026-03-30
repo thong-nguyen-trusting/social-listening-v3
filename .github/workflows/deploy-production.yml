@@ -1,0 +1,58 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout target ref
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Resolve deploy coordinates
+        id: vars
+        run: |
+          owner_lc="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          sha="$(git rev-parse HEAD)"
+          image_ref="ghcr.io/${owner_lc}/social-listening-v3:sha-${sha}"
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          echo "image_ref=${image_ref}" >> "$GITHUB_OUTPUT"
+
+      - name: Write SSH material
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy on production server
+        env:
+          DEPLOY_SHA: ${{ steps.vars.outputs.sha }}
+          IMAGE_REF: ${{ steps.vars.outputs.image_ref }}
+        run: |
+          ssh -p 55463 ubuntu@e1.chiasegpu.vn \
+            "export APP_DIR='/home/ubuntu/social-listening-v3' DEPLOY_SHA='${DEPLOY_SHA}' IMAGE_REF='${IMAGE_REF}'; bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$APP_DIR"
+          previous_head="$(git rev-parse HEAD 2>/dev/null || true)"
+          git fetch origin --prune
+          git checkout --detach "$DEPLOY_SHA"
+          chmod +x scripts/*.sh
+          PREVIOUS_HEAD="$previous_head" scripts/deploy_production.sh
+          REMOTE

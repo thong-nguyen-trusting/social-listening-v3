@@ -21,6 +21,11 @@ FROM python:3.12-slim
 
 LABEL maintainer="social-listening-v3"
 LABEL description="AI Facebook Social Listening - Phase 1"
+ARG VCS_REF=unknown
+ARG BUILD_DATE=unknown
+LABEL org.opencontainers.image.source="https://github.com/blackbirdzzzz365-gif/social-listening-v3"
+LABEL org.opencontainers.image.revision="${VCS_REF}"
+LABEL org.opencontainers.image.created="${BUILD_DATE}"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb \
