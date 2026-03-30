@@ -11,6 +11,9 @@ services:
       - browser_profile:/root/.social-listening/browser_profile
       - sqlite_data:/data
     environment:
+      OPENAI_COMPATIBLE_API_KEY: ${OPENAI_COMPATIBLE_API_KEY:-}
+      OPENAI_COMPATIBLE_BASE_URL: ${OPENAI_COMPATIBLE_BASE_URL:-https://llm.chiasegpu.vn/v1}
+      OPENAI_COMPATIBLE_TIMEOUT_SEC: ${OPENAI_COMPATIBLE_TIMEOUT_SEC:-25}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPAQUE_ID_SECRET: ${OPAQUE_ID_SECRET}
       VNC_PASSWORD: ${VNC_PASSWORD:-}
