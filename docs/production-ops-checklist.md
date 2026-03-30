@@ -67,14 +67,20 @@ sudo journalctl -u cloudflared -n 50 --no-pager
 
 ### 6. Secrets
 
-- [ ] `.env` da co `ANTHROPIC_API_KEY`
+- [ ] `.env` da co `OPENAI_COMPATIBLE_API_KEY`
+- [ ] `.env` da co `OPENAI_COMPATIBLE_BASE_URL`
+- [ ] `.env` da co `OPENAI_COMPATIBLE_TIMEOUT_SEC`
+- [ ] `.env` da co `ANTHROPIC_API_KEY` neu dung fallback provider
 - [ ] `.env` da co `OPAQUE_ID_SECRET`
 - [ ] `.env` da co `VNC_PASSWORD`
 
 Validate:
 
 ```bash
-docker exec social-listening-v3 sh -lc 'test -n "$ANTHROPIC_API_KEY" && echo SET || echo MISSING'
+docker exec social-listening-v3 sh -lc 'test -n "$OPENAI_COMPATIBLE_API_KEY" && echo SET || echo MISSING'
+docker exec social-listening-v3 sh -lc 'printf "%s\n" "$OPENAI_COMPATIBLE_BASE_URL"'
+docker exec social-listening-v3 sh -lc 'printf "%s\n" "$OPENAI_COMPATIBLE_TIMEOUT_SEC"'
+docker exec social-listening-v3 sh -lc 'test -n "$ANTHROPIC_API_KEY" && echo FALLBACK_SET || echo FALLBACK_EMPTY'
 ```
 
 ### 7. Build va start
@@ -145,6 +151,7 @@ curl -I https://live-browser.blackbirdzzzz.art/vnc.html
 
 - [ ] session creation pass
 - [ ] planner flow pass
+- [ ] provider primary la `chiasegpu`
 
 Validate:
 
@@ -152,6 +159,12 @@ Validate:
 curl -s -X POST https://social-listening-v3.blackbirdzzzz.art/api/sessions \
   -H 'Content-Type: application/json' \
   -d '{"topic":"phan hoi khach hang ve the tin dung TPBank EVO"}'
+```
+
+Neu can kiem tra provider trong container:
+
+```bash
+docker exec social-listening-v3 sh -lc 'test -n "$OPENAI_COMPATIBLE_API_KEY" && echo CHIASEGPU_READY || echo CHIASEGPU_MISSING'
 ```
 
 ### 13. Facebook login
